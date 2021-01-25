@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/3.0.1/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.18.1/lib/index.min.js">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath@0.6.5/css/texmath.css">
+<link rel="stylesheet" href="https://gitcdn.xyz/repo/goessner/mdmath/master/css/vscode-texmath.css">
+
+</head>
+<body class="markdown-body">
+<h1 id="mechanism-limited-direct-execution" data-line="0" class="code-line">Mechanism:  Limited Direct Execution</h1>
+<ul>
+<li data-line="1" class="code-line">OS time shares (run one process for little bit, then run another process for little bit and so on) the CPU to virtualize it.</li>
+<li data-line="2" class="code-line">challenges include
+<ul>
+<li data-line="3" class="code-line">performance: how to run many process without excessive overhead.</li>
+<li data-line="4" class="code-line">control: how to run processes efficiently while retaining control over CPU
+<ul>
+<li data-line="5" class="code-line">control is really important for OS, since it is in charge of resources.</li>
+<li data-line="6" class="code-line">without control, and process can just run forever and take over the machine or access sensitive information.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="7" class="code-line">high performance while keeping control is one of the central challenges of building an OS.</li>
+</ul>
+<h2 id="basic-technique---limited-direct-execution" data-line="9" class="code-line">Basic Technique - Limited direct execution</h2>
+<ul>
+<li data-line="10" class="code-line">Direct execution: OS does all the setup (memory, arguments, I/O) as previously described and executes call main(). Program runs directly on CPU. OS frees resources and removes process from list.</li>
+</ul>
+<h3 id="problem-1-restricted-operations" data-line="12" class="code-line">problem 1: restricted operations</h3>
+<ul>
+<li data-line="13" class="code-line">direct execution is obviously fast, but what if the process tries a restricted operation like I/O or other memory.
+<ul>
+<li data-line="14" class="code-line">processor modes are a solution
+<ul>
+<li data-line="15" class="code-line">in user mode, instructions are restricted.</li>
+<li data-line="16" class="code-line">in Kernel mode, code can do what it likes such as I/O, restricted instructions, etc.</li>
+<li data-line="17" class="code-line">To allow user processes to perform priveleged operations, the concept of system call was invented.
+<ul>
+<li data-line="18" class="code-line">hardware assists OS by providing different modes of execution: special instructions to trap into the kernel and return-from-trap back to user-mode programs are provided.</li>
+<li data-line="19" class="code-line">Also provided are instructions that OS can use to tell the hardware whern the trap table resided in memory.</li>
+</ul>
+</li>
+<li data-line="20" class="code-line">To execute a system call, program must execute a special trap instruction.
+<ul>
+<li data-line="21" class="code-line">Jumps into kernel and raises privelege to kernel mode. OS can do the required work and call return-from-trap instruction, which returns control to user program and reduces privelege to user mode.</li>
+</ul>
+</li>
+<li data-line="22" class="code-line">Hardware needs to be careful when executing trap in that it must make sure to save enough of the caller's registers to be able to return correctly OS issues return-from-trap.
+<ul>
+<li data-line="23" class="code-line">on x86, processor will push the Program counter, flags, and few other registers onto a per-process kernel stack. Basic concepts are similar on other platforms.</li>
+</ul>
+</li>
+<li data-line="24" class="code-line">Using trap table, OS can specify what code (trap handler) to execute for different traps. Cannot give the user this ability because that is a bad idea.
+<ul>
+<li data-line="25" class="code-line">additionally, OS must check for mailicious or erroneous inputs and not allow access to restricted areas.</li>
+</ul>
+</li>
+<li data-line="26" class="code-line">To specify the exact system call, a system-call number is usually assigned to each system call.
+<ul>
+<li data-line="27" class="code-line">OS checks and verifies it corresponds to a valid number and then executes the corresponding system call.</li>
+<li data-line="28" class="code-line">this indirection serves as protection since user cannot specify exact address.</li>
+</ul>
+</li>
+<li data-line="29" class="code-line">The trap table operation is really important, and hence privileged. OS won't allow to do this in user mode.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="30" class="code-line">2 steps for Limited direct execution protocol
+<ul>
+<li data-line="31" class="code-line">at boot, kernel specifies trap tables by privileged instruction, and hardware remembers it.</li>
+<li data-line="32" class="code-line">When process wants a system call, it traps back into OS which handles the request and returns control to the program via return-from-trap call.</li>
+</ul>
+</li>
+</ul>
+<h3 id="problem-2-switching-between-processes" data-line="34" class="code-line">problem 2: switching between processes</h3>
+<ul>
+<li data-line="35" class="code-line">
+<p data-line="35" class="code-line">When process runs, OS is by definition not running. How does OS regain control?</p>
+</li>
+<li data-line="37" class="code-line">
+<p data-line="37" class="code-line">cooperative approach - wait for system calls or illegal operations like divide by 0. Used by Mac OS in the past, but one process can keep control infinitely if it doesn't do the things required for OS to gain control.</p>
+</li>
+<li data-line="38" class="code-line">
+<p data-line="38" class="code-line">non cooperative: OS takes control</p>
+<ul>
+<li data-line="39" class="code-line">Without more help from harware, OS can't do much at all when a process refuses to make system calls.</li>
+<li data-line="40" class="code-line">cooperative approach had the only solution of rebooting the machine.</li>
+<li data-line="41" class="code-line">The solution is a timer interrupt. A timer can be programmed to raise an interrupt every so many milliseconds
+<ul>
+<li data-line="42" class="code-line">When interrupt is raised, the process running is halted and a pre-configured interrupt handler in the OS runs. At this point OS has regained control of CPU.</li>
+<li data-line="43" class="code-line">So OS must inform the hardware of which code to run when this interrput happens and OS must also start the timer during boot sequence.</li>
+<li data-line="44" class="code-line">this timer can be turned off.</li>
+<li data-line="45" class="code-line">hardware has responsibility to save enough state that a return-from-trap is later possible.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="46" class="code-line">
+<p data-line="46" class="code-line">saving and restoring context</p>
+<ul>
+<li data-line="47" class="code-line">after regaining control, OS must decide whether that program should continue to run or whether another program should run. The part of OS called scheduler decides this.</li>
+<li data-line="48" class="code-line">If the decision to switch is made, OS executes the low level mechanism known as context switch.
+<ul>
+<li data-line="49" class="code-line">context switch is conceptually simple: all the OS has to do is save a few register values for the currently-executing process (onto its kernel stack, for example) and restore a few for the soon-to-be-executing process (from its kernel stack). By doing so, the OS thus ensures that when the return-from-trap instruction is finally executed, instead of returning to the process that was running, the system resumes execution of another process.
+<ul>
+<li data-line="50" class="code-line">To save the context of the currently-running process, the OS will execute some low-level assembly code to save the general purpose registers, PC, and the kernel stack pointer of the currently-running process</li>
+<li data-line="51" class="code-line">It then restores those registers and pointers for the next process to execute.</li>
+<li data-line="52" class="code-line">By switching stacks, the kernel enters the call to the switch code in the context of one process (the one that was interrupted) and returns in the context of another (the soon-to-be-executing one).
+<ul>
+<li data-line="53" class="code-line">When OS decides to run another process, it has to explicitly save kernel registers so that when it switches from A to B, the kernel stack for B is restored even though originally A was running.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="concurrency" data-line="55" class="code-line">Concurrency</h3>
+<ul>
+<li data-line="56" class="code-line">What if another interrupt happend when handling one interrupt.
+<ul>
+<li data-line="57" class="code-line">OS might disable interrupts when processing an interrupt. So CPU won't get other interrupts. This can be bad if too many interrupts are lost.</li>
+<li data-line="58" class="code-line">OS can have sophisticated locking schemes to protect concurrent access to internal data structures. This enables multiple activities to be on-going withing the kernel at the same time, particularly useful on multiprocessors.
+<ul>
+<li data-line="59" class="code-line">locking can be complicated and lead to a variety of interesting and hard-to-find bugs.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</body></html>

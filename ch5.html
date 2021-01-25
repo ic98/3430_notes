@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/3.0.1/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.18.1/lib/index.min.js">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath@0.6.5/css/texmath.css">
+<link rel="stylesheet" href="https://gitcdn.xyz/repo/goessner/mdmath/master/css/vscode-texmath.css">
+
+</head>
+<body class="markdown-body">
+<h1 id="interlude-process-api" data-line="0" class="code-line">Interlude: Process API</h1>
+<h2 id="fork-system-call" data-line="2" class="code-line">fork() system call</h2>
+<ul>
+<li data-line="3" class="code-line">used to create a new process.</li>
+<li data-line="4" class="code-line">Strange routine.
+<ul>
+<li data-line="5" class="code-line">The process created is an almost exact copy of the the calling program.</li>
+<li data-line="6" class="code-line">Child process doesn't start at main, but rather as if it had called fork() itself.
+<ul>
+<li data-line="7" class="code-line">Parent received pid of child from fork()</li>
+<li data-line="8" class="code-line">child receives 0 from fork()</li>
+<li data-line="9" class="code-line">Scheduler decides which runs first, so might get different outputs.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="wait-system-call" data-line="12" class="code-line">wait() system call</h2>
+<ul>
+<li data-line="13" class="code-line">If parent calls wait(), the system call usually won't return until the child has run and exited.
+<ul>
+<li data-line="14" class="code-line">In some cases, it might.</li>
+</ul>
+</li>
+</ul>
+<h2 id="exec-system-call" data-line="16" class="code-line">exec() system call</h2>
+<ul>
+<li data-line="17" class="code-line">This system call is useful when you want to run a program that is different from the calling program.</li>
+<li data-line="18" class="code-line">Also strange like fork()
+<ul>
+<li data-line="19" class="code-line">loads code of executable, overwrites the current code segment (and static data) with it, and reinitializes the heap, stack, and other parts of the memory space of program.</li>
+<li data-line="20" class="code-line">Then OS passes in any arguments as argv.</li>
+<li data-line="21" class="code-line">So NO new process created, rather current process is transformed.</li>
+<li data-line="22" class="code-line">a successful exec() call never returns.</li>
+</ul>
+</li>
+</ul>
+<h2 id="why" data-line="24" class="code-line">Why?</h2>
+<ul>
+<li data-line="25" class="code-line">separation of fork and exec is essential to the build a UNIX shell. It lets the shell run code after the call to fork() but before the call to exec(). This code can alter the environment of the about-to-br-run program, allowing interesting features to be built.
+<ul>
+<li data-line="26" class="code-line">Allows pipes, input/output redirection and other cool features without changing the programs being run.</li>
+</ul>
+</li>
+<li data-line="27" class="code-line">shell is just a user program. Shows a prompt and then waits for you to type. When a command is typed, shell find executable and any arguments, calls fork() to create a child process, then some variant of exec() to run command then waits for command to complete by calling wait().</li>
+<li data-line="28" class="code-line">When complete, shell returns from wait and and print out a promt and is ready for another command.</li>
+<li data-line="29" class="code-line"><code>$prompt&gt; wc p3.c &gt; newfile.txt</code>
+<ul>
+<li data-line="30" class="code-line">the way shell does this is simply by closing standard output and opening newfile.txt when the child is created but before calling exec().
+<ul>
+<li data-line="31" class="code-line">Due to this, any output is sent to the file rather than printed on screen.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="32" class="code-line">Can also be done in code, by closing STDOUT_FILENO and opening the desired output file.
+<ul>
+<li data-line="33" class="code-line">because UNIX systems start looking for free file descriptors at 0</li>
+</ul>
+</li>
+<li data-line="34" class="code-line">pipes are implemented in a similar way but with the pipe() system call.
+<ul>
+<li data-line="35" class="code-line">in this cas, the output of one process is connected to that same pipe, thus the output of one process seamlessly is used as the input to the next process.</li>
+</ul>
+</li>
+</ul>
+<h2 id="process-control-and-users" data-line="37" class="code-line">process control and users</h2>
+<ul>
+<li data-line="38" class="code-line">there are a lot of other interfaces for interacting with processes other than fork, exec, and wait.
+<ul>
+<li data-line="39" class="code-line">kill() is used to send signals to a process, including directives to pause, die, and others.</li>
+<li data-line="40" class="code-line">UNIX keystroke combos are mapped to some these calls
+<ul>
+<li data-line="41" class="code-line">ctrl+c: SIGINT interrupt, usually terminates</li>
+<li data-line="42" class="code-line">ctrl+z: SIGSTP stop, stops process mid execution</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="43" class="code-line">signals subsystem provides a rich infrastructure to deliver external events to processes, including ways to recevie and process signals withing individual processes, and ways to send signals to individual processes and process groups.
+<ul>
+<li data-line="44" class="code-line">To use this, process should use the signal() system call to catch various signals</li>
+<li data-line="45" class="code-line">allows proper behaviour by program when a signal is received.</li>
+</ul>
+</li>
+<li data-line="46" class="code-line">concept of user is important. A user can create and control its own processes, the OS takes the job of managing resources for various users to meet overall system goals.
+<ul>
+<li data-line="47" class="code-line">The superuser can kill other processes and has complete control over the system, so those priveleges should be used sparingly.</li>
+</ul>
+</li>
+</ul>
+<h2 id="useful-tools" data-line="49" class="code-line">useful tools</h2>
+<ul>
+<li data-line="50" class="code-line">ps command allows to see which processes are running</li>
+<li data-line="51" class="code-line">top displays the processes and how much CPU anmd other resources are eaten up</li>
+<li data-line="52" class="code-line">kill can kill processes, killall does what you'd imagine.</li>
+<li data-line="53" class="code-line">MenuMeters is a CPU meter that shows how much CPU is being used.</li>
+</ul>
+
+</body></html>

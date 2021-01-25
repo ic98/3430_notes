@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/3.0.1/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.18.1/lib/index.min.js">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath@0.6.5/css/texmath.css">
+<link rel="stylesheet" href="https://gitcdn.xyz/repo/goessner/mdmath/master/css/vscode-texmath.css">
+
+</head>
+<body class="markdown-body">
+<h1 id="introduction-3" data-line="0" class="code-line">Introduction</h1>
+<h2 id="os-3" data-line="2" class="code-line">OS</h2>
+<ul>
+<li data-line="3" class="code-line">body of software responsible for making it easy to run programs (even allowing you to seemingly run many at the same time), allowing programs to share memory, enabling programs to interact with devices, and other fun stuff like that.</li>
+<li data-line="4" class="code-line">it is in charge of making sure the system operates correctly and efficiently in an easy-to-use manner</li>
+<li data-line="5" class="code-line">primary way it does it is through <strong>virtualization</strong>
+<ul>
+<li data-line="6" class="code-line">virtualization -  OS takes a physical resource and transforms it into a more general, powerful, easy-to-use virtual form. Sometimes OS is called Virtual machine.</li>
+<li data-line="7" class="code-line">provides interfaces (APIs) to allow user to give commands.
+<ul>
+<li data-line="8" class="code-line">System calls to access memory, run proggrams, access other devices, and other related actiions.
+<ul>
+<li data-line="9" class="code-line">known as standard library</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="10" class="code-line">virtualization allows programs to run concurrently, as OS manages concurrent access to instruuctions and data, and other devices like disks. OS is sometimes called resource manager.</li>
+<li data-line="11" class="code-line">CPU, memory, Disk are all resources.</li>
+<li data-line="12" class="code-line">OS must manage them fairly or with other goals.</li>
+</ul>
+</li>
+</ul>
+<h2 id="virtualization-is-first-piece-3" data-line="14" class="code-line">Virtualization is first piece</h2>
+<h3 id="virtulizing-cpu-3" data-line="15" class="code-line">virtulizing CPU</h3>
+<ul>
+<li data-line="16" class="code-line">OS creates an illusion of sorts, allowing many programs to run on one CPU core. The illusion is that the system has a lot of virtual CPUs, turning a few CPUs into seemingly infinite CPUs thus allowing multiple programs to run at once.</li>
+<li data-line="17" class="code-line">needs policy to decide which programs run, which run first, and so one.
+<ul>
+<li data-line="18" class="code-line">Policy - decides</li>
+<li data-line="19" class="code-line">Mechanism - does what policy decides</li>
+</ul>
+</li>
+</ul>
+<h3 id="virtualizing-memory-3" data-line="21" class="code-line">virtualizing memory</h3>
+<ul>
+<li data-line="22" class="code-line">Modern machines present memory as a simple array of bytes. To read we need to give an address. To write, we need to also specify the data to be written along with the address.</li>
+<li data-line="23" class="code-line">Memory is accessed all the time when program runs.</li>
+<li data-line="24" class="code-line">OS virtualizes it
+<ul>
+<li data-line="25" class="code-line">Each process accesses it's own virtual address space (that the OS maps to physical memory).</li>
+<li data-line="26" class="code-line">So memory reference within a program doesn't affect other programs.</li>
+<li data-line="27" class="code-line">Running program sees memory all for itself even though reality is that physical memory is shared</li>
+</ul>
+</li>
+</ul>
+<h2 id="concurrency-3" data-line="29" class="code-line">Concurrency</h2>
+<ul>
+<li data-line="30" class="code-line">When many threads run at same time or different processes run at the same time.</li>
+<li data-line="31" class="code-line">happens in OS, but also multithreaded programs.</li>
+<li data-line="32" class="code-line">Because these instructions do not executeatomically(all at once), strange things can happen. It is this problem of concurrency that we will address in great detail in the second part of this book.</li>
+</ul>
+<h2 id="persistence-3" data-line="34" class="code-line">Persistence</h2>
+<ul>
+<li data-line="35" class="code-line">Memory is volatile, loses all data when power is lost (shudown, restart etc.)</li>
+<li data-line="36" class="code-line">Need a more persistent storage for hardware and software to be able to store data.</li>
+<li data-line="37" class="code-line">Comes in the form of I/O devices
+<ul>
+<li data-line="38" class="code-line">Hard drives are used as common repositories of long-lived information, but SSDs are gaining more market share.</li>
+</ul>
+</li>
+<li data-line="39" class="code-line">Software that manages the disk is called file system.
+<ul>
+<li data-line="40" class="code-line">it is thus responsible for storing any files the user creates in a reliable and efficient manner on the disks of the system.</li>
+</ul>
+</li>
+<li data-line="41" class="code-line">Unlike abstractions for CPU and Memory, OS doesn't create private virtualized disk. Rather it's assumed that users will want to share information in files
+<ul>
+<li data-line="42" class="code-line">eg: edit file in emacs and run with gcc to get executable and then run executable.</li>
+<li data-line="43" class="code-line">need shared access to do this. emacs creates file that gcc also accesses, gcc creates execuatable that OS also accesses to run it.</li>
+</ul>
+</li>
+<li data-line="44" class="code-line">Programs access system calls which are routed to the file system which handles requests and returns some error code.</li>
+<li data-line="45" class="code-line">FS does complex work to write
+<ul>
+<li data-line="46" class="code-line">Figures out where on the disk data will reside</li>
+<li data-line="47" class="code-line">keeps track of various structures it maintains</li>
+<li data-line="48" class="code-line">Requires I/O requests to storage device
+<ul>
+<li data-line="49" class="code-line">A device driver is some code in the operating system that knows how to deal with a specific device. We will talk more about devices and device drivers later.</li>
+<li data-line="50" class="code-line">Non trivial</li>
+</ul>
+</li>
+<li data-line="51" class="code-line">OS provides abstactions for this</li>
+</ul>
+</li>
+<li data-line="52" class="code-line">For performance, writes are often delayed and batched into larger groups
+<ul>
+<li data-line="53" class="code-line">Most file systems incorporate intricate write protocols like journaling or copy-on-write to handle problems of system crashes. Writes are ordered carefully to ensure that system can restore to a reasonable state if failures occur during write sequence.</li>
+<li data-line="54" class="code-line">FS employ many Data structures from simple lists to complex b-trees.</li>
+</ul>
+</li>
+</ul>
+<h2 id="design-goals-3" data-line="56" class="code-line">Design Goals</h2>
+<ul>
+<li data-line="57" class="code-line">There are always tradeoffs when trying to achieve many different goals.
+<ul>
+<li data-line="58" class="code-line">Important to make the right trade-offs in building a system.</li>
+</ul>
+</li>
+<li data-line="59" class="code-line">Most basic goal is abstraction</li>
+<li data-line="60" class="code-line">Another is high performance or minimizing overhead
+<ul>
+<li data-line="61" class="code-line">Virtualization and ease-of-use, and other OS features have a cost. Goal is to provide these without excessive overheads</li>
+<li data-line="62" class="code-line">overheads can be time, space on disk and memory. Seek to minimize both, but often not possible so must make tradeoff in that case.</li>
+</ul>
+</li>
+<li data-line="63" class="code-line">Another goal is protection, often through isolation. OS allows many programs to run at once, so it must protect against programs with bad or malicious behaviour.</li>
+<li data-line="64" class="code-line">Another is high degree of reliability since everything depends on OS.</li>
+<li data-line="65" class="code-line">Some other possible goals include energy efficiency, security, mobility.</li>
+</ul>
+<h2 id="some-history-3" data-line="67" class="code-line">Some history</h2>
+<ul>
+<li data-line="68" class="code-line">
+<p data-line="68" class="code-line">Early OS - just libraries</p>
+<ul>
+<li data-line="69" class="code-line">for commonly used functions like I/O handling.</li>
+<li data-line="70" class="code-line">Ran one program at a time, controlled by human operator</li>
+<li data-line="71" class="code-line">known as batch processing. Programs set up byhh operator and run in a batch.</li>
+<li data-line="72" class="code-line">Not interactive</li>
+</ul>
+</li>
+<li data-line="74" class="code-line">
+<p data-line="74" class="code-line">Beyond libraries: Protection</p>
+<ul>
+<li data-line="75" class="code-line">OS took a more central role in managing machines. Realization that OS is special since it accesses everything. Can't allow that for all programs or else privacy goes out the window.</li>
+<li data-line="76" class="code-line">System call, pioneered by Atlas computing system. Instead of OS routines as library, idea was to add a special pair of hardware instructions and hardware state to make the transition into OS more formal and controlled.
+<ul>
+<li data-line="77" class="code-line">key difference is that system call transfers control into OS whie raising hardware privilege level</li>
+<li data-line="78" class="code-line">User apps run in user mode, meaning hardware restricts what apps can do.
+<ul>
+<li data-line="79" class="code-line">typically no I/O, no physical memory access, no sending network packets etc.</li>
+</ul>
+</li>
+<li data-line="80" class="code-line">When system call initiated, hardware transfers control to trap handler set by OS and simultaneously privelege is raised to kernel mode where OS has access to stuff like stuff like I/O requests, network packet sending.</li>
+<li data-line="81" class="code-line">WHen done, OS called a special return-from-trap instruction to pass control back to application.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="83" class="code-line">
+<p data-line="83" class="code-line">minicomputer and multiprogramming</p>
+<ul>
+<li data-line="84" class="code-line">Instead of just running one job at a time, the OS would load a number of jobs into memory and switch rapidly between them, thus improving CPU utilization. This switching was particularly important because I/O devices were slow; having a program wait on the CPU while its I/O was being serviced was a waste ofC PU time.</li>
+<li data-line="85" class="code-line">Memory protection became important. Processes shouldn't just access any memory.</li>
+</ul>
+</li>
+<li data-line="87" class="code-line">
+<p data-line="87" class="code-line">Unix - based on multics</p>
+<ul>
+<li data-line="88" class="code-line">Unifying priciple of building small programs that can be connected for bigger workflows.</li>
+<li data-line="89" class="code-line">Open source early example</li>
+<li data-line="90" class="code-line">came with C programming language</li>
+<li data-line="91" class="code-line">BSD (Berkeley Systems Distribution) was created from this</li>
+<li data-line="92" class="code-line">Spread slowed and companies asserted ownership due to profit reasons.</li>
+</ul>
+</li>
+<li data-line="94" class="code-line">
+<p data-line="94" class="code-line">Linux</p>
+<ul>
+<li data-line="95" class="code-line">Borrowed heavily from Unix principles and ideas, but not the codebase. Avoiding issues of legality.</li>
+<li data-line="96" class="code-line">Most modern companies like google, facebook, amazon run linux.</li>
+<li data-line="97" class="code-line">Android is based on Linux too</li>
+</ul>
+</li>
+<li data-line="100" class="code-line">
+<p data-line="100" class="code-line">Modern era (PCs)</p>
+<ul>
+<li data-line="101" class="code-line">one machine per desktop instead od minicomputer per workgroup.</li>
+<li data-line="102" class="code-line">early OSs like DOS were a step back, abandoning many lessons learned from the era of minicomputers, like memory protection.</li>
+<li data-line="103" class="code-line">Mac OS (v9 and before) took cooperative approach to scheduling, thus one thread in infinite loop could take over the whole system forcing a reboot.</li>
+<li data-line="104" class="code-line">But modern OSs improved and incorporated the lessons learned from OS development.</li>
+</ul>
+</li>
+</ul>
+
+</body></html>

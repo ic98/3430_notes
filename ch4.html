@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/3.0.1/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.18.1/lib/index.min.js">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/markdown-it-texmath@0.6.5/css/texmath.css">
+<link rel="stylesheet" href="https://gitcdn.xyz/repo/goessner/mdmath/master/css/vscode-texmath.css">
+
+</head>
+<body class="markdown-body">
+<h1 id="the-abstraction-the-process" data-line="0" class="code-line">The abstraction: The process</h1>
+<ul>
+<li data-line="2" class="code-line">a process, informally, is a running program.
+<ul>
+<li data-line="3" class="code-line">How to provide the illusion of many CPUs with only few physical CPUs?</li>
+<li data-line="4" class="code-line">Virtualization of the CPU does this.
+<ul>
+<li data-line="5" class="code-line">OS runs one process, stops it and runs another and so on.</li>
+<li data-line="6" class="code-line">OS can promote the illusion of many CPUs this way when in fact there is one or a few physical CPUs.</li>
+<li data-line="7" class="code-line">Known as time sharing of the CPU - allows user to run as many concurrent processes as they want.
+<ul>
+<li data-line="8" class="code-line">Potential cost is performance as each process will run more slowly if the CPU(s) must be shared.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li data-line="9" class="code-line">To implement virtualization, OS needs low level machinery (mechanisms) and high level intelligence.
+<ul>
+<li data-line="10" class="code-line">mechanisms are low level methods or protocols that implement a needed piece of functionality. Eg. context switch, which gives OS ability to stop one program and start another on a given CPU.</li>
+<li data-line="11" class="code-line">On top of mechanisms is some of the intelligence, in form of Policies.
+<ul>
+<li data-line="12" class="code-line">policies are algorithms for making decisions within OS.</li>
+<li data-line="13" class="code-line">Eg. Scheduling policy might decide which program out of many to run first using historical information(which program has run in last minute?), workload knowledge(types of programs run), and performance metrics(is system optimized for interactive performance, or throughput?).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="process" data-line="15" class="code-line">Process</h2>
+<ul>
+<li data-line="16" class="code-line">a process is simply a running program; at any instant in time, we can summarize a process by taking an inventory of the different pieces of the system it accesses or affects during the course of its execution.</li>
+<li data-line="17" class="code-line">machine state of a process: what a program can read or update when it is <a href="http://running.At" data-href="http://running.At">running.At</a> any given time, what parts of the machine are important to theexecu-tion of this program
+<ul>
+<li data-line="18" class="code-line">Memory is an obvious component of machine state
+<ul>
+<li data-line="19" class="code-line">instructions are in memory, data read and to be written is also in memory</li>
+<li data-line="20" class="code-line">The memory a process can address (address space) is part of the process.</li>
+</ul>
+</li>
+<li data-line="21" class="code-line">Registers are also part of machine state of a process
+<ul>
+<li data-line="22" class="code-line">Program counter (PC) (or Instruction Pointer (IP)) is a special register that points to next intruction to be executed.</li>
+<li data-line="23" class="code-line">Stack Pointer and associate frame pointer are used to manage the stack for function params, local variables, and return addresses.</li>
+<li data-line="24" class="code-line">Programs access persistent storage too, so I/O information might include a list of the files the process has open.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="process-api" data-line="26" class="code-line">Process API</h2>
+<ul>
+<li data-line="27" class="code-line">following must be included in the interface of an OS
+<ul>
+<li data-line="28" class="code-line">Create: OS must have some method to create new processes (used when click an icon or type a command in shell).</li>
+<li data-line="29" class="code-line">Destroy: Similarly, OS must have a method to destroy processes forcefully. Many processes run and exit normally, but user may want to kill a process.</li>
+<li data-line="30" class="code-line">Wait: Sometimes useful to wait for a process to stop running on its own.</li>
+<li data-line="31" class="code-line">Miscellaneous control: OSes also provide other options than kill or wait. Eg. a method to suspend and resume.</li>
+<li data-line="32" class="code-line">Status: Usually, there are interfaces to get status information about processes like how long it's been running and what is its current state.</li>
+</ul>
+</li>
+</ul>
+<h2 id="process-creation" data-line="34" class="code-line">process creation</h2>
+<ul>
+<li data-line="35" class="code-line">first OS must load code and any static data like initialized variables into memory, into the address space of the process.
+<ul>
+<li data-line="36" class="code-line">Programs reside on disk in some kind of executable format.</li>
+<li data-line="37" class="code-line">Earlier OSes did this eagerly, all at once before running</li>
+<li data-line="38" class="code-line">Modern OSed do it lazily, loading code or data only when needed during execution.
+<ul>
+<li data-line="39" class="code-line">Need to understand paging and swapping first</li>
+</ul>
+</li>
+<li data-line="40" class="code-line">Some memory must be allocated for runtime stack of the program.</li>
+<li data-line="41" class="code-line">OS may also allocate some memory for the program's heap. ]
+<ul>
+<li data-line="42" class="code-line">OS can get involved when heap needs to be resized.</li>
+<li data-line="43" class="code-line">Usually some minimal memory is allocated for heap, even when program doesn't need it.</li>
+<li data-line="44" class="code-line">Everything is done through system calls, even though we call the wrappers like malloc() which actually leads to OS calling sbrk().</li>
+</ul>
+</li>
+<li data-line="45" class="code-line">OS initialized stack with arguemtns, like argv and argc for main().</li>
+<li data-line="46" class="code-line">OS will also do other initialization tasks, like I/O.
+<ul>
+<li data-line="47" class="code-line">Unix has has 3 open descriptors, for standard input, output, and error.</li>
+</ul>
+</li>
+<li data-line="48" class="code-line">OS can then start the program execution from main() and transferring control of the CPU to the process.</li>
+</ul>
+</li>
+</ul>
+<h2 id="process-states" data-line="50" class="code-line">process states</h2>
+<ul>
+<li data-line="51" class="code-line">
+<p data-line="51" class="code-line">States are</p>
+<ul>
+<li data-line="52" class="code-line">Running: iin a running state, the process is running on processor, ie. executing instruction.</li>
+<li data-line="53" class="code-line">Ready: Process is ready to run, but OS has chosen not to run it.</li>
+<li data-line="54" class="code-line">Blocked: Process has performed some operation that makes it not ready to run until some other event happens. Like I/O request to disk.</li>
+</ul>
+</li>
+<li data-line="56" class="code-line">
+<p data-line="56" class="code-line">Ready -&gt; running  when program is scheduled</p>
+<ul>
+<li data-line="57" class="code-line">Running -&gt; ready when descheduled</li>
+<li data-line="58" class="code-line">Running -&gt; I/O request -&gt; blocked</li>
+<li data-line="59" class="code-line">blocked -&gt; I/O done -&gt; ready</li>
+</ul>
+</li>
+</ul>
+<h2 id="data-structures" data-line="61" class="code-line">Data structures</h2>
+<ul>
+<li data-line="62" class="code-line">Process list for all processes that are ready and some additional information to track which process is currently running. OS also tracks blocked process.
+<ul>
+<li data-line="63" class="code-line">When IO event completes the OS should make sure to wake the correct process and ready it to run.</li>
+</ul>
+</li>
+<li data-line="64" class="code-line">Register context will hold, for stopped process, the contents of registers. When process is stopped, registers will be saved to this memory location. OS can resume running the process by restoring these registers. This is context switch.</li>
+<li data-line="65" class="code-line">System might also have inital state the process is in. A process could be placed in final state too, where it has exited but not cleaned up. Known as zombie state in UNIX.
+<ul>
+<li data-line="66" class="code-line">final stat is useful since it allows other processes, usually parent process, to examine the return code and see if it exited successfully.</li>
+<li data-line="67" class="code-line">When finished, parent will make one final call to wait for completion of child, and also indicate to the OS that it can clean up and relevant Data structures that referred to the now-extinct process.</li>
+</ul>
+</li>
+</ul>
+<h2 id="summmary" data-line="69" class="code-line">SUMMMARY</h2>
+<ul>
+<li data-line="70" class="code-line">The processis the major OS abstraction of a running program. At any point in time, the process can be described by its state: the contents of memory in its address space, the contents of CPU registers(including theprogram counter and stack pointer, among others),and information about I/O (such as open files which can be read or written).</li>
+<li data-line="71" class="code-line">The process API consists of calls programs can make related to processes. Typically, this includes creation, destruction, and other useful calls.</li>
+<li data-line="72" class="code-line">Processes exist in one of many different process states, including running, ready to run, and blocked. Different events (e.g., getting scheduled or descheduled, or waiting for an I/O to complete) transition a process from one of these states to the other.</li>
+<li data-line="73" class="code-line">A process list contains information about all processes in the system. Each entry is found in what is sometimes called a process control block(PCB), which is really just a structure that contains information about a specific process.</li>
+</ul>
+
+</body></html>
